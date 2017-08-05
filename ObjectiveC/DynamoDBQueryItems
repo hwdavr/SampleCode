@@ -1,0 +1,50 @@
+#import <AWSDynamoDB/AWSDynamoDB.h>
+
+
+- (void)queryItems {
+        AWSDynamoDBObjectMapper *dynamoDBObjectMapper = [AWSDynamoDBObjectMapper defaultDynamoDBObjectMapper];
+        
+        AWSDynamoDBQueryExpression *queryExpression = [AWSDynamoDBQueryExpression new];
+        queryExpression.scanIndexForward = @NO;
+        
+        queryExpression.keyConditionExpression = [NSString stringWithFormat:@"client_id = :idval AND #d > :rangeval"];
+        
+        queryExpression.expressionAttributeValues = @{
+                                                      @":idval" : @"000003",
+                                                      @":rangeval" : @"2017-04-29 14:56:000"
+                                                      };
+        // Because 'timestamp' is a reserve name, need to use expressionAttributeNames
+        queryExpression.expressionAttributeNames = @{@"#d": @"timestamp"};
+        queryExpression.limit = @10;
+
+        AWSTask *task = [[[dynamoDBObjectMapper query:[DDBTableRow class]
+                                  expression:queryExpression]
+                 continueWithExecutor:[AWSExecutor mainThreadExecutor] withSuccessBlock:^id(AWSTask *task) {
+                     if (!self.lastEvaluatedKey) {
+                         [self.tableRows removeAllObjects];
+                     }
+
+                     AWSDynamoDBPaginatedOutput *paginatedOutput = task.result;
+                     for (DDBTableRow *item in paginatedOutput.items) {
+                         [self.tableRows addObject:item];
+                     }
+
+                     self.lastEvaluatedKey = paginatedOutput.lastEvaluatedKey;
+                     if (!paginatedOutput.lastEvaluatedKey) {
+                         self.doneLoading = YES;
+                     }
+
+                     [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+                     [self.tableView reloadData];
+
+                     return nil;
+                 }] continueWithExecutor:[AWSExecutor mainThreadExecutor] withBlock:^id(AWSTask *task) {
+                     if (task.error) {
+                         NSLog(@"Error: [%@]", task.error);
+                     }
+
+                     [self.lock unlock];
+                     
+                     return nil;
+                 }];
+}

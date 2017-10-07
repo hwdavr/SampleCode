@@ -3,9 +3,11 @@
 
 
 - (NSInteger)progressAlert {
-    alert = [UIAlertController alertControllerWithTitle:@"Reminder"
+    alert = [UIAlertController alertControllerWithTitle:@"Processing..."
                                                                   message:nil
                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    [alert addAction:[UIAlertAction actionWithTitle: @"Cancel" style: UIAlertActionStyleCancel handler:nil]];
 
     //UIViewController *customVC     = [[ProgressViewController alloc] init];
     UIViewController *customVC     = [[UIViewController alloc] init];
